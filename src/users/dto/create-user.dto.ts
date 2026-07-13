@@ -1,7 +1,13 @@
-import { Role } from '@prisma/client';
-import { IsEmail, IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+} from 'class-validator';
 
-export class CreateAuthDto {
+export class CreateUserDto {
   @IsString()
   @Length(2, 50)
   firstName!: string;
@@ -12,13 +18,14 @@ export class CreateAuthDto {
   lastName!: string;
 
   @IsEmail()
+  @IsNotEmpty()
   email!: string;
 
-  @IsOptional()
   @IsOptional()
   @Length(10, 20)
   mobile?: string;
 
-  @IsEnum(Role)
-  role!: Role;
+  @IsNotEmpty()
+  @IsUUID()
+  roleId!: string;
 }
