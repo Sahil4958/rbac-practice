@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  DRAFT
+  INVITED
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+model User {
+  id                  String   @id @default(uuid()) @db.Uuid
+
+  firstName           String
+  lastName            String?
+  email               String   @unique
+  mobile              String?  @db.VarChar(20)
+  password            String?
+
+  roleId              String   @db.Uuid
+  role                Role     @relation(fields: [roleId], references: [id])
+
+  status              UserStatus @default(DRAFT)
+
+  invitationToken     String?  @unique
+  invitationExpires   DateTime?
+
+  createdBy           String?  @db.Uuid
+  updatedBy           String?  @db.Uuid
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  deletedAt           DateTime?
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+
+  name        String
+  code        String   @unique
+  description String?
+
+  users               User[]
+  rolePermissions     RolePermission[]
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+
+  name        String
+  code        String   @unique
+  module      String
+  description String?
+
+  rolePermissions RolePermission[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(uuid()) @db.Uuid
+
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+
+  @@unique([roleId, permissionId])
+
+  @@map("role_permissions")
+}
