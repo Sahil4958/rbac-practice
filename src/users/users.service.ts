@@ -6,6 +6,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { UserStatus } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
+import { randomUUID } from 'crypto';
+import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -16,7 +18,6 @@ export class UsersService {
         id: createUserDto.roleId,
       },
     });
-    console.log(role, 'role.............');
 
     if (!role) {
       throw new NotFoundException('Role not found');
@@ -28,7 +29,7 @@ export class UsersService {
       },
     });
     if (existingUser) {
-      throw new ConflictException('User is already exists');
+      throw new ConflictException('User is already exists with this email');
     }
 
     return this.prisma.user.create({
@@ -59,5 +60,31 @@ export class UsersService {
         role: true,
       },
     });
+    return user;
+  }
+
+  async inviteUser(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const token = randomUUID();
+
+    const updatedUser = await this.prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        status: UserStatus.INVITED,
+        invitationToken: token,
+        invitationExpires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      },
+    });
+    return {
+      message: 'User Invited Successfully',
+      data: updatedUser,
+    };
   }
 }

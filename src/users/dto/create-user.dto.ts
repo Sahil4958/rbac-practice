@@ -22,7 +22,7 @@ export class CreateUserDto {
   email!: string;
 
   @IsOptional()
-  @Length(10, 20)
+  @Length(8, 20)
   mobile?: string;
 
   @IsNotEmpty()
