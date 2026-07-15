@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 import { CreateUserDto } from './dto/create-user.dto';
+import { AcceptInvite } from './dto/accept-invite-dto';
 
 @Controller('users')
 export class UsersController {
@@ -25,5 +26,10 @@ export class UsersController {
   @Post(':id/invite')
   inviteUser(@Param('id') id: string) {
     return this.usersService.inviteUser(id);
+  }
+
+  @Post('accept-invitation')
+  acceptInvitation(@Body() dto: AcceptInvite) {
+    return this.usersService.acceptInvitation(dto);
   }
 }

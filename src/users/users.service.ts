@@ -2,12 +2,14 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserStatus } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
 import { randomUUID } from 'crypto';
-import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
+import { AcceptInvite } from './dto/accept-invite-dto';
+import bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -85,6 +87,68 @@ export class UsersService {
     return {
       message: 'User Invited Successfully',
       data: updatedUser,
+    };
+  }
+
+  async acceptInvitation(dto: AcceptInvite) {
+    const { token, password, confirmPassword } = dto;
+
+    if (password !== confirmPassword) {
+      throw new BadRequestException(
+        'Password and confirm password do not match',
+      );
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        invitationToken: token,
+      },
+      include: {
+        role: true,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('Invalid invite link');
+    }
+
+    if (user.status !== UserStatus.INVITED) {
+      throw new BadRequestException('Invitation is not valid');
+    }
+
+    if (!user.invitationExpires || user.invitationExpires < new Date()) {
+      throw new BadRequestException('Invitation link expires');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const updateUser = await this.prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        password: hashedPassword,
+        status: UserStatus.ACTIVE,
+        invitationToken: null,
+        invitationExpires: null,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        mobile: true,
+        status: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
+    });
+    return {
+      message: 'Account activated successfully',
+      data: updateUser,
     };
   }
 }
